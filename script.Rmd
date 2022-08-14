@@ -1,0 +1,83 @@
+---
+title: "Course Project 1"
+output: html_document
+date: '2022-08-11'
+---
+
+## Load libraries
+```{r, echo = TRUE}
+library(ggplot2)
+library(dplyr)
+```
+
+## Loading and preprocessing the data
+
+```{r, echo = TRUE}
+
+#Load Data
+df <- read.csv("activity.csv")
+#Change to date format
+df$date <- as.Date(df$date, "%Y-%m-%d")
+
+df_copy <- data.frame(df)
+
+# Use only valid steps
+df <- df[!is.na(df$steps),]
+```
+
+## What is mean total number of steps taken per day?
+
+```{r, echo = TRUE}
+#Calculate and plot histogram of the total number of steps taken per day
+steps <- tapply(df$steps, df$date, sum, simplify=TRUE)
+data_frame(steps = steps) %>% ggplot(., aes(steps)) + 
+  geom_histogram(bins = 5,color="black")+
+  labs(x="Total Steps per Day", y = "Count", title="Histogram of daily steps")
+# Median and mean of daily steps
+print(summary(steps))
+```
+
+## What is the average daily activity pattern?
+
+```{r, echo = TRUE}
+interval_ave <-  tapply(df$steps, df$interval, mean, simplify=TRUE)
+interval_ave <- data.frame(interval=as.integer(names(interval_ave)),average=interval_ave)
+ggplot(interval_ave, aes(x=interval, y = average)) +
+  geom_line()+labs(x="Interval", y = "Average steps", title="Steps per interval average over dates")
+max_interval <- interval_ave[which.max(interval_ave$average), "interval"]
+print(paste("Interval with maximum average steps is: ", as.character(max_interval)))
+```
+
+## Imputing missing values
+
+```{r, echo = TRUE}
+# get the NA indices
+mask <- is.na(df_copy$steps)
+num_na <- sum(mask)
+print(paste("Number of NA entries: ", num_na))
+
+# compute the interval steps averaged over days
+interval_ave <-  tapply(df_copy[!mask, "steps"], df_copy[!mask, "interval"], 
+                        mean, simplify=TRUE)
+#Set na values to interval steps averaged over days
+for (i in which(mask)) {
+  df_copy[i, "steps"] <- interval_ave[as.character(df_copy[i,"interval"])]
+}
+
+#Plot histogram and show median and mean
+steps2 <- tapply(df_copy$steps, df_copy$date, sum, simplify=TRUE)
+data_frame(steps = steps2) %>% ggplot(., aes(steps)) + 
+  geom_histogram(bins = 5,color="black")+
+  labs(x="Total Steps per Day", y = "Count", title="Histogram of daily steps with NA entries filled")
+# Median and mean of daily steps
+print(summary(steps2))
+```
+Upon visible inspection, there is no dramatic effect by filling the NA entries.  
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+```{r, echo = TRUE}
+df_copy["weekday"] = weekdays(df_copy$date)
+
+```
+
